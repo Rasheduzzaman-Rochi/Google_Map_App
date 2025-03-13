@@ -141,5 +141,12 @@ class _homeScreenState extends State<homeScreen> {
     setState(() {});
   }
 
-  void _goBackToMyLocation() {}
+  void _goBackToMyLocation() {
+    _mapController.animateCamera(CameraUpdate.newCameraPosition(
+      CameraPosition(
+        target: LatLng(23.82242062483616, 90.42276089152202),
+        zoom: 15.0,
+      ),
+    ));
+  }
 }
