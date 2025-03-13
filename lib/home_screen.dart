@@ -129,7 +129,7 @@ class _homeScreenState extends State<homeScreen> {
               child: Icon(Icons.location_on_outlined)),
           SizedBox(width: 16),
           FloatingActionButton(
-              onPressed: _addNewMarker, child: Icon(Icons.my_location)),
+              onPressed: _goBackToMyLocation, child: Icon(Icons.my_location)),
         ],
       ),
     );
