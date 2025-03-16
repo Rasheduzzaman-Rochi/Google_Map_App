@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
+
+// 1. App needs permission to use GPS
+// 2. GPS service status on
+// 3. Fetch GPS current location/listen current location
 
 class homeScreen extends StatefulWidget {
   const homeScreen({super.key});
@@ -9,137 +13,78 @@ class homeScreen extends StatefulWidget {
 }
 
 class _homeScreenState extends State<homeScreen> {
-  late final GoogleMapController _mapController;
+  Position? _currentPosition;
 
-  final Set<Marker> _markers = <Marker>{
-    Marker(
-      markerId: MarkerId("my-home"),
-      position: LatLng(23.82242062483616, 90.42276089152202),
-      infoWindow: InfoWindow(
-        title: "My Home",
-        onTap: () {},
-      ),
-      onTap: () {},
-      // do whatever you want
-      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueMagenta),
-    ),
-    Marker(
-      markerId: MarkerId("my-home"),
-      position: LatLng(20.82242062483616, 90.42276089152202),
-      infoWindow: InfoWindow(
-        title: "My office",
-        onTap: () {},
-      ),
-      onTap: () {},
-      // do whatever you want
-      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRose),
-    ),
-    Marker(
-      markerId: MarkerId("pick-up-location"),
-      position: LatLng(21.82242062483616, 90.42276089152202),
-      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-      draggable: true,
-      onDragStart: (LatLng startLatLng) {
-        print("Start latLng $startLatLng");
-      },
-      onDragEnd: (LatLng startLatLng) {
-        print("Stop latLng $startLatLng");
-      },
-    ),
-  };
+  @override
+  void initState() {
+    super.initState();
+    _listenCurrentLocation();
+  }
 
-  final Set<Polyline> _polylines = <Polyline>{
-    Polyline(
-      polylineId: PolylineId('home-to-office'),
-      points: [
-        LatLng(20.82242062483616, 90.42276089152202),
-        LatLng(21.82242062483616, 90.42276089152202),
-      ],
-      color: Colors.pink,
-      endCap: Cap.roundCap,
-      width: 4,
-      jointType: JointType.round,
-      startCap: Cap.roundCap,
-    ) //one location to another location line create
-  };
+  Future<void> _listenCurrentLocation() async {
+    if (await _checkPermissionStatus()) {
+      if (await _isGpsServiceEnabled()) {
+        Geolocator.getPositionStream(
+            locationSettings: LocationSettings(
+          accuracy: LocationAccuracy.best,
+          distanceFilter: 2,
+          // timeLimit: Duration(seconds: 1),
+        )).listen((pos) {
+          print(pos);
+        });
+      } else {
+        _requestGpsService();
+      }
+    } else {
+      _requestPermission();
+    }
+  }
 
-  final Set<Circle> _circles = <Circle>{
-    Circle(
-        circleId: CircleId("most-affected"),
-        center: LatLng(23.82242062483616, 90.42276089152202),
-        radius: 300,
-        fillColor: Colors.red.withOpacity(0.3),
-        strokeWidth: 3,
-        strokeColor: Colors.red)
-  };
+  Future<bool> _checkPermissionStatus() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.always ||
+        permission == LocationPermission.whileInUse) {
+      return true;
+    }
+    return false;
+  }
 
-  final Set<Polygon> _polygons = <Polygon>{
-    Polygon(
-      polygonId: PolygonId("random-polygon"),
-      points: [
-        LatLng(22.82242062483616, 90.42276089152202),
-        LatLng(23.82242062483616, 90.42276089152202),
-        LatLng(24.82242062483616, 90.42276089152202),
-        LatLng(22.82242062483616, 90.52276089152202),
-      ],
-      fillColor: Colors.orange.withOpacity(0.4),
-      strokeColor: Colors.orange,
-      strokeWidth: 4,
-      onTap: () {
-        print("Polygon tapped");
-      },
-    )
-  };
+  Future<bool> _requestPermission() async {
+    LocationPermission permission = await Geolocator.requestPermission();
+    if (permission == LocationPermission.always ||
+        permission == LocationPermission.whileInUse) {
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> _isGpsServiceEnabled() async {
+    return await Geolocator.isLocationServiceEnabled();
+  }
+
+  Future<void> _requestGpsService() async {
+    await Geolocator.openLocationSettings();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Google Maps"),
+        title: Text("Home Screen"),
       ),
-      body: GoogleMap(
-        mapType: MapType.terrain,
-        initialCameraPosition: CameraPosition(
-          target: LatLng(23.82242062483616, 90.42276089152202),
-          zoom: 10.0,
+      body: Center(
+        child: Column(
+          children: [
+            Text("Permission status: "),
+            Text("GPS status: "),
+            Text("Current location: "),
+          ],
         ),
-        onMapCreated: (GoogleMapController controller) {
-          _mapController = controller;
-        },
-        onTap: (LatLng latLng) {
-          print("Tapped on $latLng");
-        },
-        onLongPress: (LatLng latLng) {
-          print("Long pressed on $latLng");
-        },
-        trafficEnabled: true,
-        zoomControlsEnabled: true,
-        myLocationButtonEnabled: true,
-        myLocationEnabled: true,
-        compassEnabled: true,
-        markers: _markers,
-        polylines: _polylines,
-        circles: _circles,
       ),
-      floatingActionButton: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          FloatingActionButton(
-              onPressed: _addNewMarker,
-              child: Icon(Icons.location_on_outlined)),
-          SizedBox(width: 16),
-          FloatingActionButton(
-              onPressed: _addNewMarker, child: Icon(Icons.my_location)),
-        ],
+      floatingActionButton: FloatingActionButton(
+        onPressed: _listenCurrentLocation,
+        child: const Icon(Icons.add_location_outlined),
       ),
     );
   }
-
-  void _addNewMarker() {
-    _markers.add(Marker(
-        markerId: MarkerId("New-marker"), position: LatLng(23.77, 90.4158)));
-    setState(() {});
-  }
-
-  void _goBackToMyLocation() {}
 }
